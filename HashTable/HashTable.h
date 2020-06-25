@@ -1,15 +1,16 @@
 #pragma once
-#include <string>
 #include "HashFunctions.h"
+#include "Entry.h"
 
 
-template<typename T>
+
+template<typename KeyT, typename DataT>
 class HashTable
 {
 public:
 	HashTable(unsigned int size) :
 		hash(HashFunctions::defaultHash),
-		data(new T[size]),
+		data(new Entry<KeyT, DataT>[size]),
 		size(size)
 	{
 	}
@@ -20,26 +21,78 @@ public:
 	}
 
 
-	T& operator [](const std::string& key)
+
+	DataT& operator [](const KeyT& key)
 	{
-		auto hashedKey = hash(key.c_str(), key.size()) % size;
-		//collision handling
-		return data[hashedKey];
+		// Cast the key to char* to get its bytes
+		// Use a hashed key as the array's index
+		auto hashedKey = hash((const char*)&key, sizeof(KeyT)) % size;
+
+		// Collision handling
+		while (true)
+		{
+			// If the keys match, this is the correct entry
+			if (data[hashedKey].key == key)
+				break;
+			
+			// If the entry's flag is not set, it can be taken
+			if (data[hashedKey].valid == false)
+			{
+				// Set flag and key
+				data[hashedKey].valid = true;
+				data[hashedKey].key = key;
+				break;
+			}
+
+
+			// Linear probing, and loop the key
+			hashedKey += 3;
+			hashedKey %= size;
+		}
+
+		// Return reference to data
+		return data[hashedKey].data;
+	}
+	
+	const DataT& operator [](const KeyT& key) const
+	{
+		// Cast the key to char* to get its bytes
+		// Use a hashed key as the array's index
+		auto hashedKey = hash((const char*)&key, sizeof(KeyT)) % size;
+
+		// Collision handling
+		while (true)
+		{
+			// If the keys match, this is the correct entry
+			if (data[hashedKey].key == key)
+				break;
+
+			// If the entry's flag is not set, it can be taken
+			if (data[hashedKey].valid == false)
+			{
+				// Set flag and key
+				data[hashedKey].valid = true;
+				data[hashedKey].key = key;
+				break;
+			}
+
+
+			// Linear probing, and loop the key
+			hashedKey += 3;
+			hashedKey %= size;
+		}
+
+		// Return reference to data
+		return data[hashedKey].data;
 	}
 
-	const T& operator [](const std::string& key) const
-	{
-		auto hashedKey = hash(key.c_str(), key.size()) % size;
-		//collision handling
-		return data[hashedKey];
-	}
 
 private:
 	// The hash function used
 	HashFunctions::HashFunc(hash);
 
 	// Pointer to an array of type 'T'
-	T* data;
+	Entry<KeyT, DataT>* data;
 	// The number of elements in the array 'data'
 	unsigned int size;
 };

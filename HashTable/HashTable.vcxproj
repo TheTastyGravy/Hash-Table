@@ -142,6 +142,7 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Entry.h" />
     <ClInclude Include="HashFunctions.h" />
     <ClInclude Include="HashTable.h" />
   </ItemGroup>
