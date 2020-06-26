@@ -4,7 +4,7 @@ template<typename KeyT, typename DataT>
 struct Entry
 {
 	// Used to determine if the entry has been used yet
-	bool valid = false;
+	bool inUse = false;
 	KeyT key;
 	DataT data;
 };

@@ -28,7 +28,7 @@ public:
 		unsigned int hashedKey = static_cast<BaseT*>(this)->HashKey(key);
 
 
-		// Count how mnay times the array is probed
+		// Count how many times the array is probed
 		unsigned int loopCount = 0;
 
 		// Collision handling
@@ -39,10 +39,10 @@ public:
 				break;
 			
 			// If the entry's flag is not set, it can be taken
-			if (data[hashedKey].valid == false)
+			if (data[hashedKey].inUse == false)
 			{
 				// Set flag and key
-				data[hashedKey].valid = true;
+				data[hashedKey].inUse = true;
 				data[hashedKey].key = key;
 				break;
 			}
@@ -69,7 +69,7 @@ public:
 			for (unsigned int i = 0; i < oldSize; i++)
 			{
 				// If the entry has been used, add it to the new array
-				if (oldData[i].valid == true)
+				if (oldData[i].inUse == true)
 					this->operator[](oldData[i].key) = oldData[i].data;
 			}
 
@@ -82,6 +82,32 @@ public:
 
 		// Return reference to data
 		return data[hashedKey].data;
+	}
+
+	// Check if the entry exists, without setting its flag if it doesnt
+	bool doesEntryExist(const KeyT& key) const
+	{
+		// Hash the key to use it as the index
+		unsigned int hashedKey = static_cast<BaseT*>(this)->HashKey(key);
+
+		// Collision handling
+		for (unsigned int i = 0; i < size; i++)
+		{
+			// If the keys match, the enrty exists
+			if (data[hashedKey].key == key)
+				return true;
+
+			// If the entry's flag is not set, the entry doesnt exist
+			if (data[hashedKey].inUse == false)
+				return false;
+			
+			// Linear probing, and loop the key
+			hashedKey += 3;
+			hashedKey %= size;
+		}
+
+		// The entry couldnt be found
+		return false;
 	}
 
 
@@ -107,7 +133,7 @@ public:
 
 
 	// Used by HashTableBase to get the corrent hash
-	unsigned int HashKey(const KeyT& key)
+	unsigned int HashKey(const KeyT& key) const
 	{
 		// Cast the key to char* to get its bytes
 		return this->hash((const char*)&key, sizeof(key)) % this->size;
@@ -124,7 +150,7 @@ public:
 
 
 	// Used by HashTableBase to get the corrent hash
-	unsigned int HashKey(const std::string& key)
+	unsigned int HashKey(const std::string& key) const
 	{
 		// c_str returns a const char*
 		return this->hash(key.c_str(), (unsigned int)key.size()) % this->size;
@@ -141,7 +167,7 @@ public:
 
 
 	// Used by HashTableBase to get the corrent hash
-	unsigned int HashKey(const char*& key)
+	unsigned int HashKey(const char*& key) const
 	{
 		// No need to cast; its already char*
 		return this->hash(key, (unsigned int)std::strlen(key)) % this->size;
