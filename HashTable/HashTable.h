@@ -88,7 +88,7 @@ public:
 	bool doesEntryExist(const KeyT& key) const
 	{
 		// Hash the key to use it as the index
-		unsigned int hashedKey = static_cast<BaseT*>(this)->HashKey(key);
+		unsigned int hashedKey = static_cast<const BaseT*>(this)->HashKey(key);
 
 		// Collision handling
 		for (unsigned int i = 0; i < size; i++)
@@ -167,7 +167,7 @@ public:
 
 
 	// Used by HashTableBase to get the corrent hash
-	unsigned int HashKey(const char*& key) const
+	unsigned int HashKey(const char* key) const
 	{
 		// No need to cast; its already char*
 		return this->hash(key, (unsigned int)std::strlen(key)) % this->size;
