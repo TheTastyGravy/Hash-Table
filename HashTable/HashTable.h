@@ -3,33 +3,36 @@
 #include "Entry.h"
 
 
-// Generic template
-template<typename KeyT, typename DataT>
-class HashTable
+// Base hash table functionality
+template<typename KeyT, typename DataT, class BaseT>
+class HashTableBase
 {
 public:
-	HashTable(unsigned int size) :
+	HashTableBase(unsigned int size) :
 		hash(HashFunctions::defaultHash),
 		data(new Entry<KeyT, DataT>[size]),
 		size(size)
 	{
 	}
 
-	~HashTable()
+	~HashTableBase()
 	{
 		delete[] data;
 	}
 
 
-	// Used to access the hash table like an array
+	// Used to access the hash table like an array. Will flag the accessed enrty as used
 	DataT& operator [](const KeyT& key)
 	{
-		// Cast the key to char* to get its bytes
-		// Use a hashed key as the array's index
-		auto hashedKey = hash((const char*)&key, sizeof(key)) % size;
+		// Hash the key to use it as the index
+		unsigned int hashedKey = static_cast<BaseT*>(this)->HashKey(key);
+
+
+		// Count how mnay times the array is probed
+		unsigned int loopCount = 0;
 
 		// Collision handling
-		while (true)
+		for (; loopCount < size; loopCount++)
 		{
 			// If the keys match, this is the correct entry
 			if (data[hashedKey].key == key)
@@ -50,44 +53,39 @@ public:
 			hashedKey %= size;
 		}
 
-		// Return reference to data
-		return data[hashedKey].data;
-	}
-
-	const DataT& operator [](const KeyT& key) const
-	{
-		// Cast the key to char* to get its bytes
-		// Use a hashed key as the array's index
-		auto hashedKey = hash((const char*)&key, sizeof(KeyT)) % size;
-
-		// Collision handling
-		while (true)
+		// If the entry isnt found, create larger array
+		if (loopCount == size)
 		{
-			// If the keys match, this is the correct entry
-			if (data[hashedKey].key == key)
-				break;
+			// Old data needs to be kept temporarily
+			unsigned int oldSize = size;
+			Entry<KeyT, DataT>* oldData = data;
 
-			// If the entry's flag is not set, it can be taken
-			if (data[hashedKey].valid == false)
+			// Increate size, and create new array
+			size *= 2;
+			data = new Entry<KeyT, DataT>[size];
+
+
+			// Iterate through all entries
+			for (unsigned int i = 0; i < oldSize; i++)
 			{
-				// Set flag and key
-				data[hashedKey].valid = true;
-				data[hashedKey].key = key;
-				break;
+				// If the entry has been used, add it to the new array
+				if (oldData[i].valid == true)
+					this->operator[](oldData[i].key) = oldData[i].data;
 			}
 
-
-			// Linear probing, and loop the key
-			hashedKey += 3;
-			hashedKey %= size;
+			// Delete the old array
+			delete[] oldData;
+			// Return data in new array
+			return this->operator[](key);
 		}
+
 
 		// Return reference to data
 		return data[hashedKey].data;
 	}
 
 
-private:
+protected:
 	// The hash function used
 	HashFunctions::HashFunc(hash);
 
@@ -98,95 +96,54 @@ private:
 };
 
 
-// Specialisation for string key type
-template<typename DataT>
-class HashTable<std::string, DataT>
+
+// Generic template
+template<typename KeyT, typename DataT>
+class HashTable : 
+	public HashTableBase<KeyT, DataT, HashTable<KeyT, DataT>>
 {
 public:
-	HashTable(unsigned int size) :
-		hash(HashFunctions::defaultHash),
-		data(new Entry<std::string, DataT>[size]),
-		size(size)
+	HashTable(unsigned int size) : HashTableBase<KeyT, DataT, HashTable>(size) { }
+
+
+	// Used by HashTableBase to get the corrent hash
+	unsigned int HashKey(const KeyT& key)
 	{
+		// Cast the key to char* to get its bytes
+		return this->hash((const char*)&key, sizeof(key)) % this->size;
 	}
+};
 
-	~HashTable()
+// Specialised string key
+template<typename DataT>
+class HashTable<std::string, DataT> : 
+	public HashTableBase<std::string, DataT, HashTable<std::string, DataT>>
+{
+public:
+	HashTable(unsigned int size) : HashTableBase<std::string, DataT, HashTable>(size) { }
+
+
+	// Used by HashTableBase to get the corrent hash
+	unsigned int HashKey(const std::string& key)
 	{
-		delete[] data;
+		// c_str returns a const char*
+		return this->hash(key.c_str(), (unsigned int)key.size()) % this->size;
 	}
+};
+
+// Specialised const char* key
+template<typename DataT>
+class HashTable<const char*, DataT> : 
+	public HashTableBase<const char*, DataT, HashTable<const char*, DataT>>
+{
+public:
+	HashTable(unsigned int size) : HashTableBase<const char*, DataT, HashTable>(size) { }
 
 
-	// Used to access the hash table like an array
-	DataT& operator [](const std::string& key)
+	// Used by HashTableBase to get the corrent hash
+	unsigned int HashKey(const char*& key)
 	{
-		// c_str returns const char*
-		// Use a hashed key as the array's index
-		auto hashedKey = hash(key.c_str(), (unsigned int)key.size()) % size;
-
-		// Collision handling
-		while (true)
-		{
-			// If the keys match, this is the correct entry
-			if (data[hashedKey].key == key)
-				break;
-
-			// If the entry's flag is not set, it can be taken
-			if (data[hashedKey].valid == false)
-			{
-				// Set flag and key
-				data[hashedKey].valid = true;
-				data[hashedKey].key = key;
-				break;
-			}
-
-
-			// Linear probing, and loop the key
-			hashedKey += 3;
-			hashedKey %= size;
-		}
-
-		// Return reference to data
-		return data[hashedKey].data;
+		// No need to cast; its already char*
+		return this->hash(key, (unsigned int)std::strlen(key)) % this->size;
 	}
-
-	const DataT& operator [](const std::string& key) const
-	{
-		// c_str returns const char*
-		// Use a hashed key as the array's index
-		auto hashedKey = hash(key.c_str(), key.size()) % size;
-
-		// Collision handling
-		while (true)
-		{
-			// If the keys match, this is the correct entry
-			if (data[hashedKey].key == key)
-				break;
-
-			// If the entry's flag is not set, it can be taken
-			if (data[hashedKey].valid == false)
-			{
-				// Set flag and key
-				data[hashedKey].valid = true;
-				data[hashedKey].key = key;
-				break;
-			}
-
-
-			// Linear probing, and loop the key
-			hashedKey += 3;
-			hashedKey %= size;
-		}
-
-		// Return reference to data
-		return data[hashedKey].data;
-	}
-
-private:
-	// The hash function used
-	HashFunctions::HashFunc(hash);
-
-	// Pointer to an array of entries
-	Entry<std::string, DataT>* data;
-	// The number of elements in the array 'data'
-	unsigned int size;
 };
