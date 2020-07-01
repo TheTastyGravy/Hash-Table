@@ -9,8 +9,7 @@ using std::string;
 struct Command
 {
 	int id = 0;
-	string key = "";
-	string data = "";
+	string data[2];
 };
 
 // Get input from the user
@@ -19,6 +18,8 @@ Command getInput();
 void searchTable(const string& key, HashTable<string, string>& table);
 // Add a new entry to 'table'
 void addToTable(const string& key, const string& data, HashTable<string, string>& table);
+// Display info on how to use the commands
+void showHelp();
 
 
 int main()
@@ -37,20 +38,34 @@ int main()
 		// Exit the program
 		case 1:
 			running = false;
-			break;
+			continue;
 		// Search for entry
 		case 2:
-			searchTable(command.key, hashTable);
+			searchTable(command.data[0], hashTable);
 			break;
 		// Add new entry
 		case 3:
-			addToTable(command.key, command.data, hashTable);
+			addToTable(command.data[0], command.data[1], hashTable);
+			break;
+		// Show help text
+		case 4:
+			showHelp();
 			break;
 		// 0 is invalid input
 		default:
 			print("Invalid input; try again");
-			continue;
+			break;
 		}
+
+		
+		print("\nPress any key to continue...");
+		// Clear in stream
+		std::cin.clear();
+		std::cin.ignore(std::cin.rdbuf()->in_avail());
+		// Pause
+		std::cin.get();
+		// Clear console
+		system("cls");
 	}
 
 
@@ -62,7 +77,7 @@ Command getInput()
 {
 	char input[50] = "\0";
 	// Get input
-	std::cout << "Enter command :";
+	std::cout << "Enter command : ";
 	std::cin.clear();
 	std::cin >> input;
 
@@ -70,33 +85,37 @@ Command getInput()
 	// An id of 0 is an invalid command
 	Command command;
 	
+	// How much extra input is nessesary?
+	int loopCount = 0;
+
 
 	// Exit the program
 	if (strcmp(input, "exit") == 0)
 	{
 		command.id = 1;
-		return command;
 	}
 	// Search for entry
 	else if (strcmp(input, "search") == 0)
 	{
 		command.id = 2;
+		loopCount = 1;
 	}
 	// Add new entry
 	else if (strcmp(input, "add") == 0)
 	{
 		command.id = 3;
+		loopCount = 2;
 	}
-	// Invalid input
-	else
+	// Show command help
+	else if (strcmp(input, "help") == 0)
 	{
-		return command;
+		command.id = 4;
 	}
 	
 
-	// Only search and add need more info.
-	// Loop twice, unless input is empty
-	for (int i = 0; input && i < 2; i++)
+	// Loop while more input is nessesary
+	// Contains check for if more input exists
+	for (int i = 0; i < loopCount; i++)
 	{
 		// Check if there is any input left
 		char next = std::cin.peek();
@@ -109,20 +128,9 @@ Command getInput()
 		// Get next word
 		std::cin >> input;
 
-		// On first loop, get key
-		if (i == 0)
-		{
-			command.key = input;
 
-			// Search only needs one string
-			if (command.id == 2)
-				break;
-		}
-		// On second loop, get name
-		else
-		{
-			command.data = input;
-		}
+		// Add the input to the struct
+		command.data[i] = input;
 	}
 	
 	// Return the final command
@@ -154,4 +162,12 @@ void addToTable(const string& key, const string& data, HashTable<string, string>
 
 	// Set the data
 	table[key] = data;
+}
+
+void showHelp()
+{
+	print("search <name> - Search the table for an entry of <name>");
+	print("add <name> <number> - Create a new entry of <name> and <number>, or if an entry of <name> already exists, change its number");
+	print("help - Display this text");
+	print("exit - Exit the program");
 }
